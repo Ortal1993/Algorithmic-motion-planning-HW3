@@ -34,6 +34,7 @@ class RRTTree(object):
             if v_coverage > self.max_coverage:
                 self.max_coverage = v_coverage
                 self.max_coverage_id = vid
+                self.max_coverage_config = config
 
         return vid
 
@@ -104,3 +105,6 @@ class RRTVertex(object):
         Set the cost of the vertex.
         '''
         self.cost = cost
+    
+    def set_inspected_points(self, inspected_points_union):
+        self.inspected_points = inspected_points_union

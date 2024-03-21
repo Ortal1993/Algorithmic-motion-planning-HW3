@@ -70,7 +70,8 @@ class MapEnvironment(object):
 
     def config_validity_checker(self, config):
         '''
-        Verify that the config (given or stored) does not contain self collisions or links that are out of the world boundaries.
+        Verify that the config (given or stored) does not contain self collisions 
+        or links that are out of the world boundaries.
         Return false if the config is not applicable, and true otherwise.
         @param config The given configuration of the robot.
         '''
@@ -227,8 +228,7 @@ class MapEnvironment(object):
         @param points2 list of inspected points.
         '''
         # TODO: Task 2.4
-
-        pass
+        return np.union1d(points1, points2)
 
     def compute_coverage(self, inspected_points):
         '''
@@ -263,7 +263,8 @@ class MapEnvironment(object):
 
     def get_inspected_points_for_plan(self, plan_configs):
         '''
-        Return inspected points for each configuration from a plan of configs. Designed for visualization.
+        Return inspected points for each configuration from a plan of configs. 
+        Designed for visualization.
         @param plan_configs Sequence of configs defining the plan.
         '''
         # interpolate inspected points list
