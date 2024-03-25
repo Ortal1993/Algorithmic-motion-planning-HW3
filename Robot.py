@@ -40,25 +40,37 @@ class Robot(object):
         '''
         # TODO: Task 2.2
 
-        link_length = self.links
-        curr_angle = 0.0 #angles are in radians and ranged in [−π, π]
-        curr_x = 0.0
-        curr_y = 0.0
+        link_base = [0, 0]
+        pos_vec = []
+        prev_angle = 0
+        for l in range(len(given_config)):
+            new_angle = self.compute_link_angle(prev_angle, given_config[l])
+            x = self.links[l] * np.cos(new_angle) + link_base[0]
+            y = self.links[l] * np.sin(new_angle) + link_base[1]
+            link_base = [x, y]
+            pos_vec.append(link_base)
+            prev_angle = new_angle
+        return np.array(pos_vec)
 
-        coords = {}
-        for i in range(self.dim):
-            angle = self.compute_link_angle(curr_angle, given_config[i])
-            x = curr_x + (math.cos(angle) * link_length[i])
-            y = curr_y + (math.sin(angle) * link_length[i])
-            coords[i] = (x, y)
-            curr_x = x
-            curr_y = y
-            curr_angle = given_config[i]
-
-        #should i use compute_ee_angle here?
-
-        coords_array = [coords[key] for key in coords.keys()]
-        return np.array(coords_array)   
+        # link_length = self.links
+        # curr_angle = 0.0 #angles are in radians and ranged in [−π, π]
+        # curr_x = 0.0
+        # curr_y = 0.0
+        #
+        # coords = {}
+        # for i in range(self.dim):
+        #     angle = self.compute_link_angle(curr_angle, given_config[i])
+        #     x = curr_x + (math.cos(angle) * link_length[i])
+        #     y = curr_y + (math.sin(angle) * link_length[i])
+        #     coords[i] = (x, y)
+        #     curr_x = x
+        #     curr_y = y
+        #     curr_angle = given_config[i]
+        #
+        # #should i use compute_ee_angle here?
+        #
+        # coords_array = [coords[key] for key in coords.keys()]
+        # return np.array(coords_array)
   
     def compute_ee_angle(self, given_config):
         '''
@@ -91,21 +103,25 @@ class Robot(object):
         '''
         # TODO: Task 2.2
 
-        links_lines = {}
-        for i in range (0, len(robot_positions) - 1):
-            link_line = LineString([Point(robot_positions[i]), Point(robot_positions[i + 1])])
-            links_lines[i] = link_line
+        arm = LineString(robot_positions)
+        return arm.is_simple
 
-        #convert to dictionary?
-        for i in range(len(links_lines)):
-            for j in range(i + 1, len(links_lines)):
-                intersectionPoints = list(links_lines[i].intersection(links_lines[j]).coords)
-                if len(intersectionPoints) > 1:
-                    return False
-
-            """collisions = [links_lines[i].crosses(x) for x in links_lines]
-            if any(collisions):
-                return False"""
-
-        return True
+        #
+        # links_lines = {}
+        # for i in range (0, len(robot_positions) - 1):
+        #     link_line = LineString([Point(robot_positions[i]), Point(robot_positions[i + 1])])
+        #     links_lines[i] = link_line
+        #
+        # #convert to dictionary?
+        # for i in range(len(links_lines)):
+        #     for j in range(i + 1, len(links_lines)):
+        #         intersectionPoints = list(links_lines[i].intersection(links_lines[j]).coords)
+        #         if len(intersectionPoints) > 1:
+        #             return False
+        #
+        #     """collisions = [links_lines[i].crosses(x) for x in links_lines]
+        #     if any(collisions):
+        #         return False"""
+        #
+        # return True
     

@@ -50,6 +50,8 @@ class MapEnvironment(object):
         # if you want to - you can display starting map here
         #self.visualize_map(config=self.start)
 
+
+
     def load_obstacles(self, obstacles):
         '''
         A function to load and verify scene obstacles.
@@ -228,7 +230,15 @@ class MapEnvironment(object):
         @param points2 list of inspected points.
         '''
         # TODO: Task 2.4
-        return np.union1d(points1, points2)
+        if len(points1) == 0:
+            return points2
+        elif len(points2) == 0:
+            return points1
+        #if both zero?
+
+        # return the unique points in the concatenation of the two sets (i.e. the union)
+        union = np.unique(np.concatenate([points1, points2]), axis=0)
+        return union
 
     def compute_coverage(self, inspected_points):
         '''

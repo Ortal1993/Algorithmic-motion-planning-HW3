@@ -1,4 +1,5 @@
 import operator
+import numpy as np
 
 class RRTTree(object):
     
@@ -30,13 +31,16 @@ class RRTTree(object):
 
         # check if vertex has the highest coverage so far, and replace if so
         if self.task == "ip":
-            v_coverage = self.planning_env.compute_coverage(inspected_points=inspected_points)
-            if v_coverage > self.max_coverage:
-                self.max_coverage = v_coverage
-                self.max_coverage_id = vid
-                self.max_coverage_config = config
+            self.set_max_coverage(vid, config, inspected_points)
 
         return vid
+    
+    def set_max_coverage(self, vid, config, inspected_points):
+        v_coverage = self.planning_env.compute_coverage(inspected_points=inspected_points)
+        if v_coverage > self.max_coverage:
+            self.max_coverage = v_coverage
+            self.max_coverage_id = vid
+            self.max_coverage_config = config
 
     def add_edge(self, sid, eid, edge_cost=0):
         '''
@@ -91,7 +95,23 @@ class RRTTree(object):
         vid, _ = min(enumerate(dists), key=operator.itemgetter(1))
 
         return vid, self.vertices[vid].config
+    
+    #our
+    def get_k_nearest_neighbors(self, state, k):
+        '''
+        Return k-nearest neighbors
+        @param state Sampled state.
+        @param k Number of nearest neighbors to retrieve.
+        '''
+        dists = []
+        for _, vertex in self.vertices.items():
+            dists.append(self.planning_env.robot.compute_distance(state, vertex.config))
 
+        dists = np.array(dists)
+        k = min(k, len(dists) - 1)
+        knn_ids = np.argpartition(dists, k, axis=-1)[:k]
+        return knn_ids.tolist(), [self.vertices[vid].config for vid in knn_ids]
+    
 class RRTVertex(object):
 
     def __init__(self, config, cost=0, inspected_points=None):
