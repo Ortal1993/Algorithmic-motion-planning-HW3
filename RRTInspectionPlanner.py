@@ -2,6 +2,12 @@ import numpy as np
 from RRTTree import RRTTree
 import time
 import math
+import random
+
+#from scipy.spatial import Voronoi, voronoi_plot_2d
+#import matplotlib.pyplot as plt
+from sklearn.neighbors import KernelDensity
+
 
 class RRTInspectionPlanner(object):
 
@@ -22,7 +28,10 @@ class RRTInspectionPlanner(object):
         self.coverage_of_all_seen = 0.0
         self.edges_start_end = {}
         self.k = 5
-        self.removed_edges = {} #dict[edge] = bool #dict[edge] = bool, true if it was already removed from the tree
+        
+        self.ipoint_seen_by = {} #dict[ipoint] = list of configs that saw it
+        for ipoint in self.all_inspection_points:
+            self.ipoint_seen_by[tuple(ipoint)] = []
 
     def plan(self):
         '''
@@ -39,6 +48,8 @@ class RRTInspectionPlanner(object):
         inspected_points = self.planning_env.get_inspected_points(conf_start_state)
         #We do not use here self.add_vertex on purpose
         start_id = self.tree.add_vertex(conf_start_state, inspected_points)
+        for ipoint in inspected_points:
+            self.ipoint_seen_by[ipoint].append(conf_start_state)
         self.all_seen_inspection_points = inspected_points
         self.coverage_of_all_seen = self.planning_env.compute_coverage(self.all_seen_inspection_points)
 
@@ -145,32 +156,47 @@ class RRTInspectionPlanner(object):
     #our function
     def sample_random(self) -> np.array:
         if np.random.uniform(0, 1) < self.goal_prob:
-            return self.tree.vertices[self.tree.max_coverage_id].config
-        
+            if len(self.tree.vertices[self.tree.max_coverage_id].inspected_points) <= 1: 
+                return self.tree.vertices[self.tree.max_coverage_id].config
+            else:
+                hist = {key: len(value) for key, value in self.ipoint_seen_by.items()}
+                # Find the minimum value in the dictionary
+                min_value = min(hist.values())
+                # Create a list of keys that have the minimum value
+                keys_with_min_value = [key for key, value in hist.items() if value == min_value]
+                # Randomly select one key from the list
+                random_key = random.choice(keys_with_min_value)
+                if len(self.ipoint_seen_by[random_key]) != 0:
+                    random_config = random.choice(self.ipoint_seen_by[random_key])
+                    conf = []
+                    for i in range(self.planning_env.robot.dim):
+                        lower_limit, upper_limit = random_config[i] - math.pi/4, random_config[i] + math.pi/4           
+                        conf.append(np.random.uniform(lower_limit, upper_limit))
+                    return np.array(conf)
+                else:
+                    valid_keys = [key for key, value in self.ipoint_seen_by.items() if value]
+                    closest_key = None
+                    closest_distance = math.inf
+                    for key in valid_keys:
+                        distance = np.linalg.norm(np.array(key) - np.array(random_key))
+                        if distance < closest_distance:
+                            closest_key = key
+                            closest_distance = distance
+                    
+                    random_config = random.choice(self.ipoint_seen_by[closest_key])
+                    conf = []
+                    for i in range(self.planning_env.robot.dim):
+                        lower_limit, upper_limit = random_config[i] - math.pi/4, random_config[i] + math.pi/4           
+                        conf.append(np.random.uniform(lower_limit, upper_limit))
+                    return np.array(conf)
+                
+                
         # With probability 1 - p_bias, sample randomly within link limits
         lower_limit, upper_limit = -math.pi, math.pi
         conf = []
         for i in range(self.planning_env.robot.dim):           
             conf.append(np.random.uniform(lower_limit, upper_limit))
         return np.array(conf)
-    
-        """# Sample random point within a circle centered at the node position with radius=max_coverage_radius
-        if np.random.uniform(0, 1) < self.goal_prob:
-            #sample around the config with the max coverage
-            max_coverage_config = self.tree.max_coverage_config
-            radius = np.random.uniform(0, 2*np.pi)
-            conf = []
-            for i in self.dim:           
-                x = node_position[0] * np.cos(radius)
-                y = node_position[1] * np.sin(radius)
-                conf.append((x, y))
-            return conf
-        
-        lower_limit, upper_limit = -math.pi, math.pi
-        conf = []
-        for i in self.dim:           
-            conf.append(np.random.uniform(lower_limit, upper_limit))
-        return np.array(conf)"""
     
     #our
     def add_edge(self, sid, eid, edge_cost):
@@ -194,6 +220,9 @@ class RRTInspectionPlanner(object):
                     ipoints_conf_new_child)
         self.coverage_of_all_seen = self.planning_env.compute_coverage(
                     self.all_seen_inspection_points)
+
+        for ipoint in ipoints_union:
+            self.ipoint_seen_by[tuple(ipoint)].append(config_new_child)
 
         return self.tree.add_vertex(config_new_child, ipoints_union)
 
@@ -259,16 +288,6 @@ class RRTInspectionPlanner(object):
                 self.edges_start_end[prev_father].remove(x_child_id)
                 if len(self.edges_start_end[prev_father]) == 0:
                     del self.edges_start_end[prev_father]
-            #else:
-                #setting cost of prev_father to zero and removing the ipoints of prev_father from his children
-                # self.tree.vertices[prev_father].cost = 0.0
-                # conf_father_of_father = self.tree.vertices[self.tree.edges[prev_father]].config
-                # ipoitns_to_remove = self.planning_env.get_inspected_points(conf_father_of_father)
-                # ipoitns_of_father = self.tree.vertices[prev_father].inspected_points
-                # # Remove elements of array2 from array1
-                # ipoints_reduced = np.setdiff1d(ipoitns_of_father, ipoitns_to_remove)
-                # self.tree.vertices[prev_father].set_inspected_points(ipoints_reduced)
-                # self.propagate_to_children(prev_father)
 
         #updating the inspected_points of child
         self.tree.vertices[x_child_id].set_inspected_points(ipoints_union)
